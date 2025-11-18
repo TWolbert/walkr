@@ -11,8 +11,6 @@ import (
 )
 
 func CreateUser(ctx context.Context, username string, email, password string) (*database.User, error) {
-	passwordHash, err := bcrypt.GenerateFromPassword([]byte(password), 12)
-
 	if user, err := GetUserByName(ctx, username); user != nil || err != nil {
 		return nil, errors.New("Username already taken")
 	}
@@ -20,6 +18,8 @@ func CreateUser(ctx context.Context, username string, email, password string) (*
 	if user, err := GetUserByEmail(ctx, email); user != nil || err != nil {
 		return nil, errors.New("Email already taken")
 	}
+
+	passwordHash, err := bcrypt.GenerateFromPassword([]byte(password), 12)
 
 	if err != nil {
 		return nil, err

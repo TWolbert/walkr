@@ -8,6 +8,7 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	sqldb "wlbt.nl/walkr/db"
+	"wlbt.nl/walkr/db/models"
 	database "wlbt.nl/walkr/db/sqlc"
 )
 
@@ -52,7 +53,7 @@ func main() {
 			return err
 		}
 
-		user, err := sqldb.Queries.GetUser(ctx, userId)
+		user, err := sqldb.Queries.GetUserById(ctx, userId)
 
 		if err != nil {
 			if errors.Is(err, sql.ErrNoRows) {
@@ -62,6 +63,38 @@ func main() {
 			}
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 				"error": "Something went wrong",
+			})
+		}
+
+		return c.JSON(user)
+	})
+
+	type CreateUserRequest struct {
+		Username string `json:"username"`
+		Email    string `json:"email"`
+		Password string `json:"password"`
+	}
+
+	app.Post("/user", func(c *fiber.Ctx) error {
+		c.Accepts("application/json")
+		ctx := c.Context()
+
+		var req CreateUserRequest
+
+		if err := c.BodyParser(&req); err != nil {
+			// Body wasn't valid JSON or couldn't be parsed into the struct
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+				"error":  "invalid request body",
+				"detail": err.Error(),
+			})
+		}
+
+		user, err := models.CreateUser(ctx, req.Username, req.Email, req.Password)
+
+		if err != nil {
+			return c.Status(fiber.StatusConflict).JSON(fiber.Map{
+				"error":  "Username or email already taken",
+				"detail": err.Error(),
 			})
 		}
 

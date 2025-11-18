@@ -4,6 +4,7 @@ go 1.25.4
 
 require (
 	github.com/gofiber/fiber/v2 v2.52.9
+	golang.org/x/crypto v0.14.0
 	modernc.org/sqlite v1.40.1
 )
 

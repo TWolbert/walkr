@@ -1,11 +1,21 @@
-import { createEffect, Suspense } from 'solid-js';
-import AboutData from './about.data';
+import { createEffect, createSignal, Suspense } from "solid-js";
+import AboutData from "./about.data";
+import type { User } from "../api/api";
 
 export default function About() {
-  const name = AboutData();
+  const data = AboutData();
+
+  const [error, setError] = createSignal("");
+  const [user, setUser] = createSignal<User>();
 
   createEffect(() => {
-    console.log(name());
+    const v = data();
+    if (!v) return;
+    if (!("ID" in v)) {
+      setError(v.error ?? "Unknown error");
+    } else {
+      setUser(v);
+    }
   });
 
   return (
@@ -17,7 +27,11 @@ export default function About() {
       <p>
         <span>We love</span>
         <Suspense fallback={<span>...</span>}>
-          <span>&nbsp;{name()}</span>
+          <span>
+            &nbsp;
+            {error()}
+          </span>
+          <span>&nbsp; {JSON.stringify(user()!)}</span>
         </Suspense>
       </p>
     </section>

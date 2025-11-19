@@ -5,6 +5,7 @@ import (
 	"errors"
 	"log"
 	"strconv"
+	"strings"
 
 	"github.com/gofiber/fiber/v2"
 	sqldb "wlbt.nl/walkr/db"
@@ -13,6 +14,8 @@ import (
 )
 
 func main() {
+	log.SetPrefix("Walkr: ")
+
 	if err := sqldb.Run(); err != nil {
 		log.Fatal(err)
 	}
@@ -23,11 +26,12 @@ func main() {
 		return c.SendString("Hello World")
 	})
 
-	app.Get("/users", func(c *fiber.Ctx) error {
+	app.Get("/api/users", func(c *fiber.Ctx) error {
 		ctx := c.Context()
 		users, err := sqldb.Queries.ListUsers(ctx)
 
 		if err != nil {
+			log.Println(err)
 			if errors.Is(err, sql.ErrNoRows) {
 				return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
 					"error": "No users in database",
@@ -50,12 +54,16 @@ func main() {
 		userId, err := strconv.ParseInt(c.Params("id"), 10, 64)
 
 		if err != nil {
-			return err
+			log.Println(err)
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+				"error": "Failed to parse route parameters",
+			})
 		}
 
 		user, err := sqldb.Queries.GetUserById(ctx, userId)
 
 		if err != nil {
+			log.Println(err)
 			if errors.Is(err, sql.ErrNoRows) {
 				return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
 					"error": "User not found",
@@ -75,26 +83,73 @@ func main() {
 		Password string `json:"password"`
 	}
 
-	app.Post("/user", func(c *fiber.Ctx) error {
+	app.Post("/api/user", func(c *fiber.Ctx) error {
 		c.Accepts("application/json")
 		ctx := c.Context()
 
 		var req CreateUserRequest
 
 		if err := c.BodyParser(&req); err != nil {
+			log.Println(err)
 			// Body wasn't valid JSON or couldn't be parsed into the struct
 			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-				"error":  "invalid request body",
+				"error":  "Invalid request body",
 				"detail": err.Error(),
+				"for":    "any",
+			})
+		}
+
+		req.Username = strings.TrimSpace(req.Username)
+		req.Email = strings.TrimSpace(req.Email)
+
+		if len(req.Username) == 0 {
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+				"error":  "Invalid request body",
+				"detail": "Username can't be empty",
+				"for":    "username",
+			})
+		}
+
+		if len(req.Email) == 0 {
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+				"error":  "Invalid request body",
+				"detail": "Email can't be empty",
+				"for":    "email",
+			})
+		}
+
+		if len(req.Password) == 0 {
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+				"error":  "Invalid request body",
+				"detail": "Password can't be empty",
+				"for":    "password",
+			})
+		}
+
+		if len(req.Username) < 3 {
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+				"error":  "Invalid request body",
+				"detail": "Username too short",
+				"for":    "username",
+			})
+		}
+
+		if len(req.Password) < 8 {
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+				"error":  "Invalid request body",
+				"detail": "Password too short",
+				"for":    "password",
 			})
 		}
 
 		user, err := models.CreateUser(ctx, req.Username, req.Email, req.Password)
 
 		if err != nil {
+			log.Println(err)
 			return c.Status(fiber.StatusConflict).JSON(fiber.Map{
 				"error":  "Username or email already taken",
 				"detail": err.Error(),
+				"for":    "any",
 			})
 		}
 

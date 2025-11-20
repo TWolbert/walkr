@@ -61,7 +61,7 @@ func main() {
 			})
 		}
 
-		return c.SendFile(htmlPath, true)
+		return c.SendFile(path)
 	})
 
 	log.Fatal(app.Listen(":8000"))

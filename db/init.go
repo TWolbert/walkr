@@ -5,7 +5,7 @@ import (
 	"database/sql"
 	_ "embed"
 
-	_ "modernc.org/sqlite"
+	_ "github.com/mattn/go-sqlite3"
 	database "wlbt.nl/walkr/db/sqlc"
 )
 
@@ -16,12 +16,11 @@ var Queries *database.Queries
 func Run() error {
 	ctx := context.Background()
 
-	db, err := sql.Open("sqlite", "db.sqlite")
+	db, err := sql.Open("sqlite3", "file:db.sqlite?_journal_mode=MEMORY")
 	if err != nil {
 		return err
 	}
 
-	// create tables
 	if _, err := db.ExecContext(ctx, ddl); err != nil {
 		return err
 	}

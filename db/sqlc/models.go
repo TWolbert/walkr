@@ -8,6 +8,22 @@ import (
 	"time"
 )
 
+type Role struct {
+	ID        int64
+	Role      string
+	CreatedAt time.Time
+	UpdatedAt time.Time
+}
+
+type Token struct {
+	ID        int64
+	Token     string
+	UserID    int64
+	ExpiresAt time.Time
+	CreatedAt time.Time
+	UpdatedAt time.Time
+}
+
 type User struct {
 	ID           int64
 	Username     string
@@ -15,4 +31,12 @@ type User struct {
 	PasswordHash string
 	CreatedAt    time.Time
 	UpdatedAt    time.Time
+}
+
+type UserRole struct {
+	ID        int64
+	RoleID    int64
+	UserID    int64
+	CreatedAt time.Time
+	UpdatedAt time.Time
 }

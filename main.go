@@ -1,16 +1,15 @@
 package main
 
 import (
-	"database/sql"
 	"errors"
+	"fmt"
 	"log"
-	"strconv"
-	"strings"
+	"os"
+	"path/filepath"
 
 	"github.com/gofiber/fiber/v2"
 	sqldb "wlbt.nl/walkr/db"
-	"wlbt.nl/walkr/db/models"
-	database "wlbt.nl/walkr/db/sqlc"
+	"wlbt.nl/walkr/services"
 )
 
 func main() {
@@ -20,140 +19,49 @@ func main() {
 		log.Fatal(err)
 	}
 
-	app := fiber.New()
-
-	app.Get("/", func(c *fiber.Ctx) error {
-		return c.SendString("Hello World")
+	app := fiber.New(fiber.Config{
+		Prefork: true,
 	})
 
-	app.Get("/api/users", func(c *fiber.Ctx) error {
-		ctx := c.Context()
-		users, err := sqldb.Queries.ListUsers(ctx)
-
-		if err != nil {
-			log.Println(err)
-			if errors.Is(err, sql.ErrNoRows) {
-				return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
-					"error": "No users in database",
-				})
-			}
-			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-				"error": "Something wernt wrong",
-			})
-		}
-
-		if users == nil {
-			users = []database.User{}
-		}
-
-		return c.JSON(users)
-	})
-
-	app.Get("/user/:id", func(c *fiber.Ctx) error {
-		ctx := c.Context()
-		userId, err := strconv.ParseInt(c.Params("id"), 10, 64)
-
-		if err != nil {
-			log.Println(err)
-			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-				"error": "Failed to parse route parameters",
-			})
-		}
-
-		user, err := sqldb.Queries.GetUserById(ctx, userId)
-
-		if err != nil {
-			log.Println(err)
-			if errors.Is(err, sql.ErrNoRows) {
-				return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
-					"error": "User not found",
-				})
-			}
-			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-				"error": "Something went wrong",
-			})
-		}
-
-		return c.JSON(user)
-	})
-
-	type CreateUserRequest struct {
-		Username string `json:"username"`
-		Email    string `json:"email"`
-		Password string `json:"password"`
+	dir, err := os.Getwd()
+	if err != nil {
+		fmt.Println("Error getting current working directory:", err)
+		return
 	}
 
-	app.Post("/api/user", func(c *fiber.Ctx) error {
-		c.Accepts("application/json")
-		ctx := c.Context()
+	htmlPath := filepath.Join((dir), "client/dist/index.html")
+	html, err := os.ReadFile(htmlPath)
 
-		var req CreateUserRequest
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
 
-		if err := c.BodyParser(&req); err != nil {
-			log.Println(err)
-			// Body wasn't valid JSON or couldn't be parsed into the struct
-			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-				"error":  "Invalid request body",
-				"detail": err.Error(),
-				"for":    "any",
+	app.Get("/api/user", services.GetAllUsers)
+	app.Get("/api/user/:id", services.GetUserById)
+	app.Post("/api/user", services.CreateUser)
+	app.Get("/api/self", services.GetSelf)
+
+	app.Get("/", func(c *fiber.Ctx) error {
+		return c.Type("html").SendString(string(html))
+	})
+
+	app.Get("*", func(c *fiber.Ctx) error {
+		path := c.Path()
+
+		path = filepath.Join(dir, "client/dist", path)
+
+		if _, err := os.Stat(path); err != nil {
+			if errors.Is(err, os.ErrNotExist) {
+				return c.Type("html").SendString(string(html))
+			}
+
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+				"error": err,
 			})
 		}
 
-		req.Username = strings.TrimSpace(req.Username)
-		req.Email = strings.TrimSpace(req.Email)
-
-		if len(req.Username) == 0 {
-			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-				"error":  "Invalid request body",
-				"detail": "Username can't be empty",
-				"for":    "username",
-			})
-		}
-
-		if len(req.Email) == 0 {
-			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-				"error":  "Invalid request body",
-				"detail": "Email can't be empty",
-				"for":    "email",
-			})
-		}
-
-		if len(req.Password) == 0 {
-			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-				"error":  "Invalid request body",
-				"detail": "Password can't be empty",
-				"for":    "password",
-			})
-		}
-
-		if len(req.Username) < 3 {
-			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-				"error":  "Invalid request body",
-				"detail": "Username too short",
-				"for":    "username",
-			})
-		}
-
-		if len(req.Password) < 8 {
-			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-				"error":  "Invalid request body",
-				"detail": "Password too short",
-				"for":    "password",
-			})
-		}
-
-		user, err := models.CreateUser(ctx, req.Username, req.Email, req.Password)
-
-		if err != nil {
-			log.Println(err)
-			return c.Status(fiber.StatusConflict).JSON(fiber.Map{
-				"error":  "Username or email already taken",
-				"detail": err.Error(),
-				"for":    "any",
-			})
-		}
-
-		return c.JSON(user)
+		return c.SendFile(htmlPath, true)
 	})
 
 	log.Fatal(app.Listen(":8000"))

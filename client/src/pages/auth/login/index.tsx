@@ -13,8 +13,7 @@ type Status =
   | undefined;
 
 export default function Register() {
-  const [username, setUsername] = createSignal("");
-  const [email, setEmail] = createSignal("");
+  const [usernameOrEmail, setUsernameOrEmail] = createSignal("");
   const [password, setPassword] = createSignal("");
   const [status, setStatus] = createSignal<Status>();
   const [submitting, setSubmitting] = createSignal(false);
@@ -27,10 +26,9 @@ export default function Register() {
     setStatus(undefined);
 
     try {
-      const res = await api.post("user", {
+      const res = await api.post("user/login", {
         body: JSON.stringify({
-          username: username(),
-          email: email(),
+          username_or_email: usernameOrEmail(),
           password: password(),
         }),
         headers: {
@@ -55,7 +53,7 @@ export default function Register() {
 
       setStatus({
         type: "success",
-        message: "Account created successfully",
+        message: "Logged in succesfully",
         for: "any",
       });
     } catch (err) {
@@ -76,24 +74,13 @@ export default function Register() {
         onSubmit={submitForm}
       >
         <ValidatedInput
-          value={username}
-          setValue={setUsername}
-          name="username"
+          value={usernameOrEmail}
+          setValue={setUsernameOrEmail}
+          name="username_or_email"
           status={status}
-          label="Username"
-          placeHolder="Your username..."
+          label="Username or Email"
+          placeHolder="Your username or email..."
           type="text"
-          required
-        />
-
-        <ValidatedInput
-          value={email}
-          setValue={setEmail}
-          name="email"
-          status={status}
-          label="Email"
-          placeHolder="Your email..."
-          type="email"
           required
         />
 
@@ -113,8 +100,8 @@ export default function Register() {
           type="submit"
           disabled={submitting()}
         >
-          <Show when={submitting()} fallback={<p>Register</p>}>
-            <p>Registering...</p>
+          <Show when={submitting()} fallback={<p>Log in</p>}>
+            <p>Logging in...</p>
           </Show>
         </button>
 

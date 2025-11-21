@@ -28,7 +28,7 @@ func IsNotEmpty(field string) Rule {
 	return func(value any) (bool, string, string) {
 		valueString, ok := value.(string)
 		if !ok || strings.TrimSpace(valueString) == "" {
-			return false, capitalizeFirst(field) + " is not allowed to be empty!", field
+			return false, underscoresToSpaces(capitalizeFirst(field)) + " is not allowed to be empty!", field
 		}
 
 		return true, "", ""
@@ -40,7 +40,7 @@ func IsMinLength(field string, minLength int) Rule {
 		valueString, ok := value.(string)
 
 		if !ok || len(valueString) < minLength {
-			return false, capitalizeFirst(field) + " has to be at least " + strconv.Itoa(minLength) + " characters", field
+			return false, underscoresToSpaces(capitalizeFirst(field)) + " has to be at least " + strconv.Itoa(minLength) + " characters", field
 		}
 
 		return true, "", ""
@@ -52,7 +52,7 @@ func IsMaxLength(field string, maxLength int) Rule {
 		valueString, ok := value.(string)
 
 		if !ok || len(valueString) > maxLength {
-			return false, capitalizeFirst(field) + " cannot be longer than " + strconv.Itoa(maxLength) + " characters", field
+			return false, underscoresToSpaces(capitalizeFirst(field)) + " cannot be longer than " + strconv.Itoa(maxLength) + " characters", field
 		}
 
 		return true, "", ""
@@ -67,7 +67,7 @@ func IsEmail(field string) Rule {
 		r, _ := regexp.Compile(regex)
 
 		if !ok || !r.MatchString(valueString) {
-			return false, capitalizeFirst(field) + " is not an email!", field
+			return false, underscoresToSpaces(capitalizeFirst(field)) + " is not an email!", field
 		}
 
 		return true, "", ""
@@ -83,7 +83,7 @@ func IsStrongPassword(field string) Rule {
 	return func(value any) (bool, string, string) {
 		valueString, ok := value.(string)
 		if !ok {
-			return false, capitalizeFirst(field) + " must be a string", field
+			return false, underscoresToSpaces(capitalizeFirst(field)) + " must be a string", field
 		}
 
 		var errors []string
@@ -105,7 +105,7 @@ func IsStrongPassword(field string) Rule {
 		}
 
 		if len(errors) > 0 {
-			msg := capitalizeFirst(field) + " must contain " + strings.Join(errors, ", ")
+			msg := underscoresToSpaces(capitalizeFirst(field)) + " must contain " + strings.Join(errors, ", ")
 			return false, msg, field
 		}
 
@@ -126,4 +126,8 @@ func capitalizeFirst(input string) string {
 	}
 
 	return capitalized
+}
+
+func underscoresToSpaces(input string) string {
+	return strings.ReplaceAll(input, "_", " ")
 }

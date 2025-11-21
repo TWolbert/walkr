@@ -35,3 +35,21 @@ func (q *Queries) CreateUserRole(ctx context.Context, arg CreateUserRoleParams) 
 	)
 	return i, err
 }
+
+const getUserRoleByUserId = `-- name: GetUserRoleByUserId :one
+SELECT roles.id, roles.role, roles.created_at, roles.updated_at FROM roles
+INNER JOIN user_roles ON roles.id = user_roles.role_id
+WHERE user_roles.user_id = ? LIMIT 1
+`
+
+func (q *Queries) GetUserRoleByUserId(ctx context.Context, userID int64) (Role, error) {
+	row := q.db.QueryRowContext(ctx, getUserRoleByUserId, userID)
+	var i Role
+	err := row.Scan(
+		&i.ID,
+		&i.Role,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}

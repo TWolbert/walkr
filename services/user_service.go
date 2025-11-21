@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/gofiber/fiber/v2"
+	"golang.org/x/crypto/bcrypt"
 	sqldb "wlbt.nl/walkr/db"
 	"wlbt.nl/walkr/db/models"
 	database "wlbt.nl/walkr/db/sqlc"
@@ -19,6 +20,11 @@ type CreateUserRequest struct {
 	Username string `json:"username"`
 	Email    string `json:"email"`
 	Password string `json:"password"`
+}
+
+type UserLoginRequest struct {
+	UsernameOrEmail string `json:"username_or_email"`
+	Password        string `json:"password"`
 }
 
 func CreateUser(c *fiber.Ctx) error {
@@ -135,21 +141,111 @@ func GetSelf(c *fiber.Ctx) error {
 
 	if token == "" {
 		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
-			"error": "No session token.",
+			"error": "No session token",
 		})
 	}
 
 	if data, err := models.GetUserByToken(c.Context(), token); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
-				"error": "User not found.",
+				"error": "User not found",
 			})
 		}
 
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"error": "Something went wrong.",
+			"error": "Something went wrong",
 		})
 	} else {
 		return c.JSON(data)
+	}
+}
+
+func UserLogin(c *fiber.Ctx) error {
+	c.Accepts("application/json")
+	ctx := c.Context()
+
+	var req UserLoginRequest
+
+	if err := c.BodyParser(&req); err != nil {
+		log.Println(err)
+
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error":  "Invalid request body",
+			"detail": err.Error(),
+			"for":    "any",
+		})
+	}
+
+	if err, ok := v.Validate(req.UsernameOrEmail, c, v.IsNotEmpty("username_or_email")); !ok {
+		return err
+	}
+
+	if err, ok := v.Validate(req.Password, c, v.IsNotEmpty("password")); !ok {
+		return err
+	}
+
+	err, isEmail := v.Validate(req.UsernameOrEmail, c, v.IsEmail("username_or_email"))
+
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error":  "Something went wrong",
+			"detail": "We failed to determine if you entered a username or a password",
+			"for":    "username_or_email",
+		})
+	}
+
+	var user *database.User
+
+	if isEmail {
+		email := req.UsernameOrEmail
+
+		if data, err := models.GetUserByEmail(ctx, email); err != nil || data == nil {
+			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
+				"error":  "Not found",
+				"detail": "We couldn't find a user with that e-mail",
+				"for":    "username_or_email",
+			})
+		} else {
+			user = data
+		}
+	} else {
+		username := req.UsernameOrEmail
+
+		if data, err := models.GetUserByName(ctx, username); err != nil || data == nil {
+			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
+				"error":  "Not found",
+				"detail": "We couldn't find a user with that username",
+				"for":    "username_or_email",
+			})
+		} else {
+			user = data
+		}
+	}
+
+	err = bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(req.Password))
+
+	if err != nil {
+		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
+			"error":  "Forbidden",
+			"detail": "Password incorrect",
+			"for":    "password",
+		})
+	}
+
+	if token, err := models.CreateToken(ctx, user.ID); err != nil {
+		return c.Status(fiber.StatusConflict).JSON(fiber.Map{
+			"error":  "Error generating token",
+			"detail": err.Error(),
+			"for":    "any",
+		})
+	} else {
+		c.Cookie(&fiber.Cookie{
+			HTTPOnly: true,
+			Name:     "walkr-session",
+			MaxAge:   int((time.Hour * 24 * 30).Seconds()),
+			Value:    token.Token,
+		})
+
+		return c.Status(fiber.StatusOK).JSON(user)
 	}
 }

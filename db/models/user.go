@@ -62,3 +62,13 @@ func GetUserByEmail(ctx context.Context, email string) (*database.User, error) {
 		return &user, nil
 	}
 }
+
+func UserGetRole(ctx context.Context, user *database.User) (*database.Role, error) {
+	data, err := sqldb.Queries.GetUserRoleByUserId(ctx, user.ID)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return &data, nil
+}

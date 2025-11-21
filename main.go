@@ -6,6 +6,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 	sqldb "wlbt.nl/walkr/db"
 	"wlbt.nl/walkr/services"
+	v "wlbt.nl/walkr/validation"
 )
 
 func main() {
@@ -19,10 +20,11 @@ func main() {
 		Prefork: true,
 	})
 
-	app.Get("/api/user", services.GetAllUsers)
+	app.Get("/api/user", v.IsAdmin, services.GetAllUsers)
 	app.Get("/api/user/:id", services.GetUserById)
 	app.Post("/api/user", services.CreateUser)
-	app.Get("/api/self", services.GetSelf)
+	app.Post("/api/user/login", services.UserLogin)
+	app.Get("/api/self", v.IsLoggedIn, services.GetSelf)
 
 	app.Get("/", services.ServeHTML)
 	app.Get("*", services.ServeClient)

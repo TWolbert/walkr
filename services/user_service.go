@@ -89,13 +89,6 @@ func GetAllUsers(c *fiber.Ctx) error {
 	ctx := c.Context()
 
 	if users, err := sqldb.Queries.ListUsers(ctx); err != nil {
-		log.Println(err)
-
-		if errors.Is(err, sql.ErrNoRows) {
-			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
-				"error": "No users in database",
-			})
-		}
 
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error": "Something wernt wrong",

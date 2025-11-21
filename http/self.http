@@ -1,0 +1,6 @@
+### Get Self
+
+GET http://localhost:8000/api/self
+Content-Type: application/json
+Accept: application/json
+Cookie: walkr-session=Pqqo4ahUdEZU4AAW2bFo2NKwOZjOK6WCrqVUUuBskwU=; max-age=2592000; path=/; HttpOnly; SameSite=Lax

@@ -39,7 +39,7 @@ func main() {
 	if os.Getenv("APP_ENV") == "local" {
 		log.Fatal(app.Listen(":8000"))
 	} else {
-		log.Fatal(app.ListenTLS(":8000", os.Getenv("CERT_PATH"), os.Getenv("KEY_PATH")))
+		log.Fatal(app.ListenTLS(":443", os.Getenv("CERT_PATH"), os.Getenv("KEY_PATH")))
 	}
 
 }

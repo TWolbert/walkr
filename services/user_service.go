@@ -112,7 +112,7 @@ func GetUserById(c *fiber.Ctx) error {
 		})
 	}
 
-	if user, err := sqldb.Queries.GetUserById(ctx, userId); err != nil {
+	if user, err := models.GetUserById(ctx, userId); err != nil {
 		log.Println(err)
 
 		if errors.Is(err, sql.ErrNoRows) {

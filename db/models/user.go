@@ -63,6 +63,18 @@ func GetUserByEmail(ctx context.Context, email string) (*database.User, error) {
 	}
 }
 
+func GetUserById(ctx context.Context, id int64) (*database.User, error) {
+	if user, err := sqldb.Queries.GetUserById(ctx, id); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, nil
+		}
+
+		return nil, err
+	} else {
+		return &user, nil
+	}
+}
+
 func UserGetRole(ctx context.Context, user *database.User) (*database.Role, error) {
 	data, err := sqldb.Queries.GetUserRoleByUserId(ctx, user.ID)
 
@@ -72,3 +84,5 @@ func UserGetRole(ctx context.Context, user *database.User) (*database.Role, erro
 
 	return &data, nil
 }
+
+

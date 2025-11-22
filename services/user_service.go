@@ -149,7 +149,13 @@ func GetSelf(c *fiber.Ctx) error {
 			"error": "Something went wrong",
 		})
 	} else {
-		return c.JSON(data)
+		if userWithRelations, err := models.UserLoadRelation(c.Context(), data, "token", "role"); err != nil {
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+				"error": "Something went wrong",
+			})
+		} else {
+			return c.JSON(userWithRelations)
+		}
 	}
 }
 

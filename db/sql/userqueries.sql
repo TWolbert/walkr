@@ -33,3 +33,8 @@ WHERE id = ?;
 -- name: DeleteUser :exec
 DELETE FROM users
 WHERE id = ?;
+
+-- name: UserGetToken :one
+SELECT tokens.* from tokens
+INNER JOIN users ON tokens.user_id = users.id
+WHERE tokens.user_id = ? LIMIT 1;

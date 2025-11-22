@@ -85,4 +85,50 @@ func UserGetRole(ctx context.Context, user *database.User) (*database.Role, erro
 	return &data, nil
 }
 
+func UserGetToken(ctx context.Context, user *database.User) (*database.Token, error) {
+	data, err := sqldb.Queries.UserGetToken(ctx, user.ID)
 
+	if err != nil {
+		return nil, err
+	}
+
+	return &data, nil
+}
+
+type UserWithRelations struct {
+	User  *database.User
+	Token *database.Token
+	Role  *database.Role
+}
+
+func UserLoadRelation(ctx context.Context, user *database.User, relations ...string) (*UserWithRelations, error) {
+	newUser := &UserWithRelations{
+		User: user,
+	}
+
+	for _, relation := range relations {
+		switch relation {
+		case "role":
+			data, err := UserGetRole(ctx, user)
+			if err != nil {
+				return nil, err
+			}
+
+			if data != nil {
+				newUser.Role = data
+			}
+		case "token":
+			data, err := UserGetToken(ctx, user)
+
+			if err != nil {
+				return nil, err
+			}
+
+			if data != nil {
+				newUser.Token = data
+			}
+		}
+	}
+
+	return newUser, nil
+}

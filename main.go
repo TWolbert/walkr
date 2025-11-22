@@ -2,8 +2,10 @@ package main
 
 import (
 	"log"
+	"os"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/joho/godotenv"
 	sqldb "wlbt.nl/walkr/db"
 	"wlbt.nl/walkr/services"
 	v "wlbt.nl/walkr/validation"
@@ -29,5 +31,15 @@ func main() {
 	app.Get("/", services.ServeHTML)
 	app.Get("*", services.ServeClient)
 
-	log.Fatal(app.Listen(":8000"))
+	err := godotenv.Load()
+	if err != nil {
+		log.Fatal("Error loading .env file")
+	}
+
+	if os.Getenv("APP_ENV") == "local" {
+		log.Fatal(app.Listen(":8000"))
+	} else {
+		log.Fatal(app.ListenTLS(":8000", os.Getenv("CERT_PATH"), os.Getenv("KEY_PATH")))
+	}
+
 }

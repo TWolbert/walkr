@@ -165,3 +165,23 @@ func (q *Queries) UpdateUser(ctx context.Context, arg UpdateUserParams) error {
 	)
 	return err
 }
+
+const userGetToken = `-- name: UserGetToken :one
+SELECT tokens.id, tokens.token, tokens.user_id, tokens.expires_at, tokens.created_at, tokens.updated_at from tokens
+INNER JOIN users ON tokens.user_id = users.id
+WHERE tokens.user_id = ? LIMIT 1
+`
+
+func (q *Queries) UserGetToken(ctx context.Context, userID int64) (Token, error) {
+	row := q.db.QueryRowContext(ctx, userGetToken, userID)
+	var i Token
+	err := row.Scan(
+		&i.ID,
+		&i.Token,
+		&i.UserID,
+		&i.ExpiresAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
